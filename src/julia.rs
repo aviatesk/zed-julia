@@ -1,5 +1,5 @@
-use zed::{CodeLabel, LanguageServerId};
-use zed_extension_api::{self as zed, Result};
+use zed::LanguageServerId;
+use zed_extension_api::{self as zed, settings::LspSettings, Result};
 
 struct JuliaExtension;
 
@@ -13,66 +13,79 @@ impl zed::Extension for JuliaExtension {
         _language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        let Some(julia_bin) = worktree.which("julia") else {
-            return Err("Unable to find julia binary. Make sure the PATH variable contains the directory where the julia binary is located.".to_string());
+        let settings = LspSettings::for_worktree("JETLS", worktree)?;
+
+        let jetls_bin = settings
+            .binary
+            .as_ref()
+            .and_then(|binary| binary.path.as_ref())
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| {
+                // Use platform-specific executable name
+                if cfg!(windows) {
+                    "jetls.exe"
+                } else {
+                    "jetls"
+                }
+            });
+
+        // Resolve the binary path from PATH if it's just a command name
+        let resolved_bin = if jetls_bin.contains('/') || jetls_bin.contains('\\') {
+            // It's a path (absolute or relative), use as-is
+            jetls_bin.to_string()
+        } else {
+            // It's just a command name, resolve from PATH
+            worktree
+                .which(jetls_bin)
+                .ok_or_else(|| format!("'{}' not found in PATH. Please install JETLS as a Julia app or specify the full path in settings.", jetls_bin))?
         };
+
+        // Check if binary.arguments is provided (custom arguments)
+        let args = settings
+            .binary
+            .as_ref()
+            .and_then(|binary| binary.arguments.as_ref())
+            .cloned()
+            .unwrap_or_else(|| {
+                // Default arguments for `jetls` command
+                vec!["--threads=auto".to_string(), "--".to_string()]
+            });
+
+        // Use environment variables from settings if provided (for `JULIA_APPS_JULIA_CMD` in particular)
+        let env = settings
+            .binary
+            .as_ref()
+            .and_then(|binary| binary.env.clone())
+            .map(|env_map| env_map.into_iter().collect())
+            .unwrap_or_default();
+
         Ok(zed::Command {
-            command: julia_bin.to_string(),
-            args: vec![
-                // Ideally, zed should provide ~/.config/zed/languages/LanguageServer.jl
-                // we resort to julia global environments instead.
-                "--project=@zed-julia".to_string(),
-                "--startup-file=no".to_string(),
-                "--history-file=no".to_string(),
-                "--thread=auto".to_string(),
-                "-e".to_string(),
-                // TODO: handle LanguageServer.jl updates.
-                r#"
-                import Pkg, UUIDs
-
-                ls_uuid = UUIDs.UUID("2b0e0bc5-e4fd-59b4-8912-456d1b03d8d7")
-                if !haskey(Pkg.dependencies(), ls_uuid)
-                    Pkg.add(Pkg.PackageSpec(uuid=ls_uuid))
-                end
-
-                try
-                    @eval using LanguageServer
-                catch
-                    Pkg.update()
-                    @eval using LanguageServer
-                end
-
-                runserver()
-                "#
-                .to_string(),
-            ],
-            env: Default::default(),
+            command: resolved_bin,
+            args,
+            env,
         })
     }
 
-    fn label_for_completion(
-        &self,
+    fn language_server_initialization_options(
+        &mut self,
         _language_server_id: &LanguageServerId,
-        completion: zed::lsp::Completion,
-    ) -> Option<zed::CodeLabel> {
-        match completion.kind {
-            Some(zed::lsp::CompletionKind::Unit) if completion.label.starts_with('\\') => {
-                let text = &completion.label;
-                let filter_range = if text.starts_with("\\:") && text.ends_with(":") {
-                    // Completions such as \:pizza:
-                    2..text.len() - 1
-                } else {
-                    // Unicode completions such as \lambda
-                    1..text.len()
-                };
-                Some(CodeLabel {
-                    code: completion.detail?,
-                    spans: Default::default(),
-                    filter_range: filter_range.into(),
-                })
-            }
-            _ => None,
-        }
+        worktree: &zed::Worktree,
+    ) -> Result<Option<zed::serde_json::Value>> {
+        let initialization_options = LspSettings::for_worktree("JETLS", worktree)
+            .ok()
+            .and_then(|s| s.initialization_options.clone());
+        Ok(initialization_options)
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        _language_server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<zed::serde_json::Value>> {
+        let settings = LspSettings::for_worktree("JETLS", worktree)
+            .ok()
+            .and_then(|s| s.settings.clone());
+        Ok(settings)
     }
 }
 
