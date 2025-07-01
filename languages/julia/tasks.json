@@ -1,13 +1,68 @@
 [
   {
-    "label": "julia test",
+    "label": "Julia: Run tests (Pkg.jl)",
     "command": "julia",
     "args": [
-      "--project=$ZED_WORKTREE_ROOT",
       "--startup-file=no",
       "--history-file=no",
+      "--project=$ZED_WORKTREE_ROOT",
       "-e",
-      "'import Pkg; Pkg.test()'"
+      "\"using Pkg; Pkg.test()\""
+    ]
+  },
+  {
+    "label": "Julia: Run test file (TestRunner.jl)",
+    "command": "testrunner",
+    "args": [
+      "--project=$ZED_WORKTREE_ROOT",
+      "--verbose",
+      "$ZED_FILE"
+    ]
+  },
+  {
+    "label": "Julia: Run @testset \"$ZED_CUSTOM_JULIA_TESTSET_NAME\" (TestRunner.jl)",
+    "command": "testrunner",
+    "args": [
+      "--project=$ZED_WORKTREE_ROOT",
+      "--verbose",
+      "$ZED_FILE",
+      "'$ZED_CUSTOM_JULIA_TESTSET_NAME'",
+      "--filter-lines=$ZED_ROW"
+    ],
+    "tags": ["julia-testset"]
+  },
+  // {
+  //   "label": "Julia: Run @test case (TestRunner.jl)",
+  //   "command": "testrunner",
+  //   "args": [
+  //     "--project=$ZED_WORKTREE_ROOT",
+  //     "--verbose",
+  //     "$ZED_FILE",
+  //     "\":($ZED_CUSTOM_JULIA_TEST_EXPR)\"",
+  //     "--filter-lines=$ZED_ROW"
+  //   ],
+  //   "tags": ["julia-test"]
+  // },
+  {
+    "label": "Julia: Run [TESTRUNNER] expression (TestRunner.jl)",
+    "command": "testrunner",
+    "args": [
+      "--project=$ZED_WORKTREE_ROOT",
+      "--verbose",
+      "$ZED_FILE",
+      "\":($ZED_CUSTOM_JULIA_TESTRUNNER_EXPR)\"",
+      "--filter-lines=$ZED_ROW"
+    ],
+    "tags": ["julia-testrunner"]
+  },
+  {
+    "label": "Julia: Run expression at cursor (TestRunner.jl)",
+    "command": "testrunner",
+    "args": [
+      "--project=$ZED_WORKTREE_ROOT",
+      "--verbose",
+      "$ZED_FILE",
+      "L$ZED_ROW"
     ]
   }
 ]
