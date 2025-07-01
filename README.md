@@ -128,6 +128,80 @@ to make this work.
     ]
     ```
 
+### TestRunner integration (runnable standalone test tasks)
+
+The Julia extension supports [TestRunner.jl](https://github.com/aviatesk/TestRunner.jl) for running individual tests, testsets, and test expressions directly from the editor. This provides a more granular testing experience compared to running the entire test suite with `Pkg.test()`.
+
+> [!note] Note
+> This integration requires Julia 1.12 or higher.
+
+#### Installation
+
+To use TestRunner.jl, install it globally as a Julia app:
+
+```bash
+julia -e 'using Pkg; Pkg.Apps.add("TestRunner")'
+```
+
+This will install the `testrunner` command to your Julia apps directory. Make sure Julia apps are accessible from your PATH by following the instructions at <https://pkgdocs.julialang.org/dev/apps/>.
+
+**Note:** The Julia executable used for running tests can be configured as described in the [Configuring the Julia executable for tasks](#configuring-the-julia-executable-for-tasks) section above.
+
+#### Features
+
+TestRunner.jl integration provides several runnable tasks:
+
+1. **Julia: Run test file (TestRunner.jl)** - Runs all tests in the current file
+2. **Julia: Run `@testset` (TestRunner.jl)** - Runs a specific `@testset` block at the cursor position
+4. **Julia: Run `# [TESTRUNNER]` comment expression (TestRunner.jl)** - Runs an expression following `# [TESTRUNNER]` comments
+5. **Julia: Run expression at cursor (TestRunner.jl)** - Runs an expression at line of the current cursor position, useful for debugging arbitrary code including standalone `@test` cases (manual invocation only, experimental)
+
+#### Usage
+
+You can run tests in two ways:
+
+1. **Using the play button** - Zed displays a play button (▶) in the gutter next to each `@testset` or any expression following comment starting `[TestRunner]`. Simply click the button to run that specific test.
+
+<!-- TODO: Insert screenshot showing play buttons next to test cases -->
+
+2. **Using the command palette** - Position your cursor on or inside the test element you want to run, then:
+   - Use the command palette (<kbd>Cmd/Ctrl+Shift+P</kbd>) and search for "task: spawn"
+   - Select the appropriate Julia test task from the list
+   - The test will run in a new terminal with detailed output
+
+Both methods will execute tests using TestRunner.jl with output shown in the terminal dock.
+
+#### Example
+
+```julia
+using Test
+
+test_func() = @test sin(x) == 0 # should fail
+
+@testset "begin" begin
+    println("foo")
+
+    @test sin(0) == 0
+
+    @testset let name = "bar",
+                 v = π
+        println(name)
+        @test sin(v) == 0
+    end
+
+    @testset "some testset" include("some_test_file.jl")
+
+    x = 3π/2
+    # [TestRunner]
+    test_func(x) # should fail
+end
+
+# [TESTRUNNER]
+println("Debug output")  # Run with "Run [TESTRUNNER] expression"
+```
+
+<!-- TODO: Insert demo movie showing test execution -->
+
 ### Using Zed in the REPL
 
 Zed is currently not on the list of Julia's predefined editors. You can add it to your `~/.julia/config/startup.jl`:
@@ -164,40 +238,44 @@ You can change the foreground color and text attributes of syntax tokens in your
 
 See [Syntax Highlighting and Themes](https://zed.dev/docs/configuring-languages#syntax-highlighting-and-themes) and [Tree-sitter Queries](https://zed.dev/docs/extensions/languages#tree-sitter-queries) for further details.
 
-Syntax tokens are called *captures* in tree-sitter jargon. The following table lists all captures provided by zed-julia. Some captures have default values (defined in [Zed's color themes](https://github.com/zed-industries/zed/blob/main/assets/themes/)) and the other captures fall back to one of the defaults. Depending on your color theme, some captures may be set to the editor's foreground color or to a very similar one. In this case, try to assign a different color to improve the contrast. 
+Syntax tokens are called *captures* in tree-sitter jargon. The following table lists all captures provided by zed-julia. Some captures have default values (defined in [Zed's color themes](https://github.com/zed-industries/zed/blob/main/assets/themes/)) and the other captures fall back to one of the defaults. Depending on your color theme, some captures may be set to the editor's foreground color or to a very similar one. In this case, try to assign a different color to improve the contrast.
 
-| Capture | Is there a default value? | Note/Example | 
+| Capture | Is there a default value? | Note/Example |
 | ------- | ------------------------- | ------------ |
-| boolean | yes |
-| comment | yes | line or block comment |
-| comment.doc | yes | docstring |
-| constant.builtin | no, falls back to constant | core julia built-in |
-| function.builtin | no, falls back to function | core julia built-in |
-| function.call | no, falls back to function | name of the called function |
-| function.definition | no, falls back to function | name of the defined function |
-| function.macro | no, falls back to function | name of the macro |
-| keyword | yes |
-| keyword.conditional | no, falls back to keyword | `if`, `else` |
-| keyword.conditional.ternary | no, falls back to keyword | `? :` |
-| keyword.exception | no, falls back to keyword | `try`, `catch` |
-| keyword.function | no, falls back to keyword | `function`, `do`, short function definition: `=` |
-| keyword.import | no, falls back to keyword | `im/export`, `using`, module definition |
-| keyword.operator | no, falls back to keyword | `in`, `isa`, `where` |
-| keyword.repeat | no, falls back to keyword | `for`, `while` |
-| keyword.return | no, falls back to keyword | `return` |
-| number | yes |
-| number.float | no, falls back to number |
-| operator | yes |
-| punctuation.bracket | yes | `()`, `[]`, `{}` |
-| punctuation.delimiter | yes | `,`, `;` |
-| punctuation.special | yes | string interpolation: `$()` |
-| string | yes |
-| string.escape | yes | escape sequence |
-| string.special | yes | command literal |
-| string.special.symbol | yes | quote expression |
-| type | yes |
-| type.builtin | no, falls back to type | core julia built-in |
-| type.definition | no, falls back to type |
-| variable | yes |
-| variable.builtin | no, falls back to variable | core julia built-in: `begin` and `end` in indices |
-| variable.member | no, falls back to variable | example: in `foo.bar`, the member is `bar` |
+| `boolean` | yes |
+| `comment` | yes | line or block comment |
+| `comment.doc` | yes | docstring |
+| `constant.builtin` | no, falls back to constant | core julia built-in |
+| `function.builtin` | no, falls back to function | core julia built-in |
+| `function.call` | no, falls back to function | name of the called function |
+| `function.definition` | no, falls back to function | name of the defined function |
+| `function.macro` | no, falls back to function | name of the macro |
+| `keyword` | yes |
+| `keyword.conditional` | no, falls back to keyword | `if`, `else` |
+| `keyword.conditional.ternary` | no, falls back to keyword | `? :` |
+| `keyword.exception` | no, falls back to keyword | `try`, `catch` |
+| `keyword.function` | no, falls back to keyword | `function`, `do`, short function definition: `=` |
+| `keyword.import` | no, falls back to keyword | `im/export`, `using`, module definition |
+| `keyword.operator` | no, falls back to keyword | `in`, `isa`, `where` |
+| `keyword.repeat` | no, falls back to keyword | `for`, `while` |
+| `keyword.return` | no, falls back to keyword | `return` |
+| `number` | yes |
+| `number.float` | no, falls back to number |
+| `operator` | yes |
+| `punctuation.bracket` | yes | `()`, `[]`, `{}` |
+| `punctuation.delimiter` | yes | `,`, `;` |
+| `punctuation.special` | yes | string interpolation: `$()` |
+| `string` | yes |
+| `string.escape` | yes | escape sequence |
+| `string.special` | yes | command literal |
+| `string.special.symbol` | yes | quote expression |
+| `type` | yes |
+| `type.builtin` | no, falls back to type | core julia built-in |
+| `type.definition` | no, falls back to type |
+| `variable` | yes |
+| `variable.builtin` | no, falls back to variable | core julia built-in: `begin` and `end` in indices |
+| `variable.member` | no, falls back to variable | example: in `foo.bar`, the member is `bar` |
+
+### Contributing
+
+See [this document](./CONTRIBUTING.md).
