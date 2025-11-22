@@ -160,70 +160,70 @@
   [
     "if"
     "end"
-  ] @keyword.conditional)
+  ] @keyword)
 
 (elseif_clause
-  "elseif" @keyword.conditional)
+  "elseif" @keyword)
 
 (else_clause
-  "else" @keyword.conditional)
+  "else" @keyword)
 
 (ternary_expression
   [
     "?"
     ":"
-  ] @keyword.conditional.ternary)
+  ] @keyword)
 
 (try_statement
   [
     "try"
     "end"
-  ] @keyword.exception)
+  ] @keyword)
 
 (catch_clause
-  "catch" @keyword.exception)
+  "catch" @keyword)
 
 (finally_clause
-  "finally" @keyword.exception)
+  "finally" @keyword)
 
 (for_statement
   [
     "for"
     "end"
-  ] @keyword.repeat)
+  ] @keyword)
 
 (for_binding
-  "outer" @keyword.repeat)
+  "outer" @keyword)
 
 ; comprehensions
 (for_clause
-  "for" @keyword.repeat)
+  "for" @keyword)
 
 (if_clause
-  "if" @keyword.conditional)
+  "if" @keyword)
 
 (while_statement
   [
     "while"
     "end"
-  ] @keyword.repeat)
+  ] @keyword)
 
 [
   (break_statement)
   (continue_statement)
-] @keyword.repeat
+] @keyword
 
 (function_definition
   [
     "function"
     "end"
-  ] @keyword.function)
+  ] @keyword)
 
 (do_clause
   [
     "do"
     "end"
-  ] @keyword.function)
+  ] @keyword)
 
 (macro_definition
   [
@@ -232,14 +232,14 @@
   ] @keyword)
 
 (return_statement
-  "return" @keyword.return)
+  "return" @keyword)
 
 (module_definition
   [
     "module"
     "baremodule"
     "end"
-  ] @keyword.import)
+  ] @keyword)
 
 ; Zed - added: Module name as type
 (module_definition
@@ -253,19 +253,19 @@
   (#any-of? @_name "goto" "label"))
 
 (export_statement
-  "export" @keyword.import)
+  "export" @keyword)
 
 (public_statement
-  "public" @keyword.import)
+  "public" @keyword)
 
 (import_statement
-  "import" @keyword.import)
+  "import" @keyword)
 
 (using_statement
-  "using" @keyword.import)
+  "using" @keyword)
 
 (import_alias
-  "as" @keyword.import)
+  "as" @keyword)
 
 (selected_import
   ":" @punctuation.delimiter)
@@ -275,7 +275,7 @@
     "mutable"
     "struct"
     "end"
-  ] @keyword.type)
+  ] @keyword)
 
 ; Zed - added: struct field declarations
 ; Covers `x`, `x::T`, and (for `@kwdef`) `x = v`, `x::T = v`.
@@ -331,14 +331,14 @@
     "abstract"
     "type"
     "end"
-  ] @keyword.type)
+  ] @keyword)
 
 (primitive_definition
   [
     "primitive"
     "type"
     "end"
-  ] @keyword.type)
+  ] @keyword)
 
 ; Operators & Punctuation
 (operator) @operator
@@ -430,7 +430,7 @@
     (where_expression . (call_expression (field_expression (identifier) @function.definition .)))
     (where_expression . (typed_expression . (call_expression (field_expression (identifier) @function.definition .))))
   ]
-  (operator) @keyword.function)
+  (operator) @keyword)
 
 ; Zed - added: Macro definition name highlighting
 (macro_definition
@@ -442,12 +442,12 @@
       (where_expression . (typed_expression . (call_expression . (identifier) @function.macro)))
     ]))
 
-; Keyword operators
-((operator) @keyword.operator
-  (#any-of? @keyword.operator "in" "isa"))
+; ; Keyword operators
+; ((operator) @keyword.operator
+;   (#any-of? @keyword.operator "in" "isa"))
 
 (where_expression
-  "where" @keyword.operator)
+  "where" @keyword)
 
 ; Built-in constants
 ((identifier) @constant.builtin
