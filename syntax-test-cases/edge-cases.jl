@@ -8,7 +8,7 @@ begin
     # this is a block, not an index
 end
 
-# ------------ 
+# ------------
 # Zed specials
 # ------------
 
@@ -36,7 +36,7 @@ function Base.foo(x) 2x end
 
 # Short function definitions
 # (highlight the function name as @function.definition
-# and the equal sign as @keyword.function)
+# and the equal sign as @keyword)
 foo(x) = 2x
 foo(x)::Int = 2x
 foo(x::T) where {T<:Number} = 2x
