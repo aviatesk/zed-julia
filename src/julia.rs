@@ -1,7 +1,7 @@
 use zed::LanguageServerId;
 use zed_extension_api::{
     self as zed,
-    lsp::{Completion, CompletionKind},
+    lsp::{Completion, CompletionKind, Symbol, SymbolKind},
     settings::LspSettings,
     CodeLabel, CodeLabelSpan, Result,
 };
@@ -62,6 +62,55 @@ impl JuliaExtension {
             filter_range: zed::Range {
                 start: 0,
                 end: label_len as u32,
+            },
+        })
+    }
+
+    fn label_for_symbol_impl(&self, symbol: Symbol) -> Option<CodeLabel> {
+        let name = &symbol.name;
+
+        // JETLS uses: Module, Function, Struct, Field, Interface (abstract type),
+        // Class (primitive type), Constant, Variable, Namespace (let), TypeParameter
+        let (prefix, name_highlight) = match symbol.kind {
+            SymbolKind::Module => ("module ", "type"),
+            SymbolKind::Struct => ("struct ", "type"),
+            SymbolKind::Interface => ("abstract type ", "type"),
+            SymbolKind::Class => ("primitive type ", "type"),
+            SymbolKind::Function => {
+                if name.starts_with('@') {
+                    ("macro ", "function.macro")
+                } else {
+                    ("function ", "function")
+                }
+            }
+            SymbolKind::Constant => ("const ", "constant"),
+            SymbolKind::Variable => ("", "variable"),
+            SymbolKind::Field => ("", "property"),
+            SymbolKind::Namespace => ("let ", "variable"),
+            SymbolKind::TypeParameter => ("", "type"),
+            _ => ("", ""),
+        };
+
+        let code = format!("{}{}", prefix, name);
+        let code_len = code.len() as u32;
+        let prefix_len = prefix.len() as u32;
+
+        let mut spans = Vec::new();
+        if !prefix.is_empty() {
+            spans.push(CodeLabelSpan::literal(prefix, Some("keyword".to_string())));
+        }
+        if name_highlight.is_empty() {
+            spans.push(CodeLabelSpan::literal(name, None));
+        } else {
+            spans.push(CodeLabelSpan::literal(name, Some(name_highlight.to_string())));
+        }
+
+        Some(CodeLabel {
+            code,
+            spans,
+            filter_range: zed::Range {
+                start: prefix_len,
+                end: code_len,
             },
         })
     }
@@ -158,6 +207,14 @@ impl zed::Extension for JuliaExtension {
         completion: Completion,
     ) -> Option<CodeLabel> {
         self.label_for_completion_impl(completion)
+    }
+
+    fn label_for_symbol(
+        &self,
+        _language_server_id: &LanguageServerId,
+        symbol: Symbol,
+    ) -> Option<CodeLabel> {
+        self.label_for_symbol_impl(symbol)
     }
 }
 
