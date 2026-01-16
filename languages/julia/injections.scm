@@ -96,3 +96,7 @@
   (content) @injection.content)
   (#eq? @_prefix "sql")
   (#set! injection.language "sql"))
+
+;; Add support for TODO, FIXME, HACK, etc with the "comment" extension
+((line_comment) @injection.content
+  (#set! injection.language "comment"))
