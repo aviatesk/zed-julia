@@ -1,3 +1,181 @@
+This codebase is a clone of [zed-julia](https://github.com/JuliaEditorSupport/zed-julia/).
+Its purpose is to enable testing of the new Julia language server
+[JETLS.jl](https://github.com/aviatesk/JETLS.jl) in the [Zed editor](https://zed.dev/).
+
+![](./zed-jetls.png)
+
+By following the steps below, you can use JETLS within Zed:
+
+### Requirements
+
+- The latest version of [Zed](https://zed.dev/download)
+- [Julia `v"1.12"`](https://julialang.org/downloads) or higher
+
+### Steps
+
+> [!warning]
+> This extension does not bundle JETLS.jl itself. You need to
+> install the `jetls` executable separately before using the extension.
+
+- Install the [`jetls` executable app](https://pkgdocs.julialang.org/dev/apps/),
+  which is the main entry point for running [JETLS.jl](https://github.com/aviatesk/JETLS.jl):
+  ```bash
+  julia -e 'using Pkg; Pkg.Apps.add(; url="https://github.com/aviatesk/JETLS.jl", rev="release")'
+  ```
+  This will install the `jetls` executable (or `jetls.exe` on Windows).
+- Make sure the Julia apps directory `~/.julia/bin` is available on your `PATH`:
+  You can verify the installation by running:
+  ```bash
+  jetls --help
+  ```
+  If this displays the help message, the installation was successful and `~/.julia/bin`
+  is properly added to your `PATH`.
+- Follow these [instructions](https://zed.dev/docs/extensions/developing-extensions#developing-an-extension-locally)
+  to install the requirements for developing Zed extensions, particularly the Rust installation via rustup
+- Clone [aviatesk/zed-julia](https://github.com/aviatesk/zed-julia) and check out to the `avi/JETLS` branch
+- Open Zed and invoke the `zed: extensions` command
+- Click `Install Dev Extension` and specify the directory of zed-julia
+
+With the above setup, the zed-julia extension will use the installed `jetls` to analyze Julia files.
+
+The `jetls` executable is run by default using the Julia executable that was used to install it.
+Also note that `jetls` runs with `--threads=auto` by default.
+
+If you want to use a different Julia executable to run `jetls`, change the `--threads` option, or use a local JETLS checkout,
+you will need to configure zed-julia with the following ways.
+
+#### Optional Configuration
+
+You can customize JETLS behavior in the `lsp` section of Zed settings.
+Custom `binary.arguments` must include exactly one `serve` subcommand.
+
+- To specify different `--threads` option:
+  ```jsonc
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "arguments": ["--threads=1", "--", "serve"]
+      }
+    }
+  }
+  ```
+
+- The easiest way to use a different Julia executable is to use the
+  [`JULIA_APPS_JULIA_CMD`](https://pkgdocs.julialang.org/dev/apps/#Overriding-the-Julia-Executable) environment variable:
+  ```jsonc
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "env": {
+          "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable"
+        }
+      }
+    }
+  }
+  ```
+
+- Using a local JETLS installation (for the development of JETLS itself):
+  ```jsonc
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "path": "/path/to/specific/julia/executable",
+        "arguments": [
+          "--startup-file=no",
+          "--history-file=no",
+          "--threads=auto",
+          "--project=/path/to/JETLS/directory",
+          "-m",
+          "JETLS",
+          "serve"
+        ]
+      }
+    }
+  }
+  ```
+
+- Initialization options (settings applied at server startup):
+  ```jsonc
+  "lsp": {
+    "JETLS": {
+      "initialization_options": {
+        // Number of concurrent analysis workers (default: 1)
+        "n_analysis_workers": 3
+      }
+    }
+  }
+  ```
+  Note: Changes to initialization options require restarting the language server.
+  See the [JETLS documentation](https://aviatesk.github.io/JETLS.jl/release/launching/#init-options)
+  for available options.
+
+### Configuration
+
+JETLS supports configuration through two methods:
+
+#### Method 1: Project-specific configuration file
+
+Create a `.JETLSConfig.toml` file in your project root, e.g.:
+```toml
+[full_analysis]
+debounce = 2.0
+
+# Use JuliaFormatter instead of Runic
+formatter = "JuliaFormatter"
+
+# Suppress unused argument warnings
+[[diagnostic.patterns]]
+pattern = "lowering/unused-argument"
+match_by = "code"
+match_type = "literal"
+severity = "off"
+
+[testrunner]
+executable = "/path/to/custom/testrunner"
+```
+
+#### Method 2: Zed settings
+
+Add configuration to your Zed `settings.json` under `lsp.JETLS.settings` section:
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "settings": {
+        "full_analysis": {
+          "debounce": 2.0
+        },
+        // Use JuliaFormatter instead of Runic
+        "formatter": "JuliaFormatter",
+        // Suppress unused argument warnings
+        "diagnostic": {
+          "patterns": [
+            {
+              "pattern": "lowering/unused-argument",
+              "match_by": "code",
+              "match_type": "literal",
+              "severity": "off"
+            }
+          ]
+        },
+        "testrunner": {
+          "executable": "/path/to/custom/testrunner"
+        }
+      }
+    }
+  }
+}
+```
+
+> [!note]
+> `.JETLSConfig.toml` takes precedence over editor settings when both are present.
+
+For complete configuration details,
+see the [JETLS documentation](https://aviatesk.github.io/JETLS.jl/release/configuration/).
+
+---
+
 # Zed Julia
 
 This extension adds support for the [Julia](https://julialang.org/) language in
